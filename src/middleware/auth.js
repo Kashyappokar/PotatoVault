@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
+import asyncHandler from '../utils/asyncHandler.js'
 
-export function requireAuth(req, res, next) {
+export const requireAuth = asyncHandler(async (req, res, next) => {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : null
   if (!token) return res.status(401).json({ error: 'unauthorized' })
@@ -12,4 +13,4 @@ export function requireAuth(req, res, next) {
   } catch {
     res.status(401).json({ error: 'unauthorized' })
   }
-}
+})

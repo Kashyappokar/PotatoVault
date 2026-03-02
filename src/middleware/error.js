@@ -1,13 +1,10 @@
 import { ZodError } from 'zod'
-import logger from '../utils/logger.js'
+import { ApiError } from '../utils/ApiErrors.js'
 
 export function errorHandler(err, req, res, next) {
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: 'validation_error', issues: err.errors })
+    const apiErr = ApiError.validationError('Validation Error', err.errors)
+    return ApiError.errorHandler(apiErr, req, res, next)
   }
-  const status = err.status || 500
-  const code = err.code || 'internal_error'
-  const message = err.message || 'Internal Server Error'
-  logger.error({ err, code, status }, message)
-  res.status(status).json({ error: code, message })
+  return ApiError.errorHandler(err, req, res, next)
 }

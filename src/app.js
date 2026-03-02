@@ -7,6 +7,7 @@ import logger from './utils/logger.js'
 import routes from './routes/index.js'
 import { errorHandler } from './middleware/error.js'
 import { env } from './config/env.js'
+import { ApiError } from './utils/ApiErrors.js'
 
 const app = express()
 
@@ -40,6 +41,9 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api', routes)
+app.use((req, res, next) => {
+  next(ApiError.notFound(`Route ${req.method} ${req.path} not found`))
+})
 app.use(errorHandler)
 
 export default app
