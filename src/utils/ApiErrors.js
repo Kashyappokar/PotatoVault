@@ -64,22 +64,16 @@ class ApiError extends Error {
   }
 
   toJSON() {
-    const errorResponse = {
-      success: this.success,
+    return {
+      success: false,
       statusCode: this.statusCode,
       message: this.message,
-      timestamp: this.timestamp
+      errors: this.errors ?? [], // ✅ always an array
+      timestamp: this.timestamp,
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: this.stack?.split('\n').map((line) => line.trim())
+      })
     }
-
-    if (this.errors) {
-      errorResponse.errors = this.errors
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      errorResponse.stack = this.stack?.split('\n').map((line) => line.trim())
-    }
-
-    return errorResponse
   }
 }
 
