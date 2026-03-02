@@ -1,5 +1,5 @@
 {
-  "name": "stocks-app",
+  "name": "potato-vault",
   "version": "1.0.0",
   "description": "Express ESM app for stocks management with authentication and production features",
   "type": "module",
