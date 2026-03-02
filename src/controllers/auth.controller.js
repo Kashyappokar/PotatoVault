@@ -3,6 +3,7 @@ import * as AuthService from '../services/auth.service.js'
 import ApiResponse from '../utils/ApiResponse.js'
 import { ApiError } from '../utils/ApiErrors.js'
 import asyncHandler from '../utils/asyncHandler.js'
+import logger from '../utils/logger.js'
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -16,9 +17,19 @@ const LoginSchema = z.object({
 })
 
 export const register = asyncHandler(async (req, res) => {
-  const data = RegisterSchema.parse(req.body)
-  const result = await AuthService.register(data)
-  res.status(201).json(ApiResponse.created(result))
+  try {
+    const data = RegisterSchema.parse(req.body)
+    const result = await AuthService.register(data)
+    res.status(201).json(ApiResponse.created(result))
+  } catch (error) {
+    logger.error({ err: error }, 'Error registering user')
+
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    throw ApiError.badRequest('Registration failed')
+  }
 })
 
 export const login = asyncHandler(async (req, res) => {

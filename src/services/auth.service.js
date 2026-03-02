@@ -3,18 +3,30 @@ import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import { User } from '../models/user.model.js'
 import { ApiError } from '../utils/ApiErrors.js'
+import logger from '../utils/logger.js'
 
 export async function register({ email, name, password }) {
-  const existing = await User.findOne({ email })
-  if (existing) {
-    throw ApiError.conflict('Email already in use')
+  try {
+    const existing = await User.findOne({ email })
+    if (existing) {
+      logger.error({ email }, 'Email already registered')
+      throw ApiError.conflict('Email already registered')
+    }
+    const hash = await bcrypt.hash(password, 10)
+    const user = await User.create({ email, name, password: hash })
+    const token = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    })
+    return { token, user: { id: user.id, email: user.email, name: user.name } }
+  } catch (error) {
+    logger.error({ err: error }, 'Error registering user')
+
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    throw ApiError.badRequest('Registration failed')
   }
-  const hash = await bcrypt.hash(password, 10)
-  const user = await User.create({ email, name, password: hash })
-  const token = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-  })
-  return { token, user: { id: user.id, email: user.email, name: user.name } }
 }
 
 export async function login({ email, password }) {
