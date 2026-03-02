@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 class ApiError extends Error {
   constructor(
     statusCode = 500,
