@@ -100,8 +100,4 @@ const errorHandler = (err, req, res, _next) => {
   res.status(error.statusCode).json(error.toJSON())
 }
 
-export default {
-  ApiError,
-  errorHandler
-}
 export { ApiError, errorHandler }
