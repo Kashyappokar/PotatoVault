@@ -8,6 +8,7 @@ import routes from './routes/index.js'
 import { errorHandler } from './middleware/error.js'
 import { env } from './config/env.js'
 import { ApiError } from './utils/ApiErrors.js'
+import ApiResponse from './utils/ApiResponse.js'
 
 const app = express()
 
@@ -37,7 +38,7 @@ app.use(
 )
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' })
+  res.json(ApiResponse.success({ status: 'ok' }, 'OK'))
 })
 
 app.use('/api', routes)
