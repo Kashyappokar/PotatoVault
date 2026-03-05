@@ -5,12 +5,12 @@ const dataSchema = new mongoose.Schema({
   numberOfBags: { type: Number, required: true },
   symbol: { type: String, required: true },
   vehicleNumber: { type: String, required: true },
+  weighingBillNumber: { type: Number, required: true },
   remark: { type: String, required: true },
   chamber: { type: Number, required: true },
   floor: { type: Number, required: true },
   netWeight: { type: Number, required: true },
   rNumber: { type: [String], required: true },
-  weighingBillNumber: { type: Number, required: true },
 });
 
 const schema = new mongoose.Schema(

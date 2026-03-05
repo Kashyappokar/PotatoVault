@@ -3,6 +3,7 @@ import * as StocksService from '../services/stocks.service.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiErrors.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import logger from '../utils/logger.js';
 
 const StockDataEntrySchema = z.object({
   date: z.string().min(1),
@@ -21,8 +22,10 @@ const StockSchema = z.object({
   farmerCode: z.string().min(1),
   name: z.string().min(1),
   address: z.string().min(1),
-  phone: z.string().min(10).max(10, 'Phone number must be 10 digits'),
-  stocks: z.array(StockDataEntrySchema).min(1),
+  phone: z.string().length(10, 'Phone number must be 10 digits'),
+  stocks: z.array(StockDataEntrySchema, {
+    invalid_type_error: 'Only Array of Stock Data Entries is allowed',
+  }),
 });
 
 const UpdateSchema = z.object({
@@ -58,8 +61,11 @@ export const get = asyncHandler(async (req, res) => {
 
 export const create = asyncHandler(async (req, res) => {
   const data = StockSchema.safeParse(req.body);
-  if (!data.success) throw ApiError.badRequest(data.error.message);
-  const row = await StocksService.create(data.data);
+  if (!data.success) {
+    logger.error('Invalid stock data:', data.error);
+    throw data.error;
+  }
+  const row = await StocksService.create(data?.data);
   res.status(201).json(ApiResponse.created(row, 'Stock created successfully'));
 });
 
