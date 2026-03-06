@@ -1,6 +1,6 @@
-import pino from 'pino'
+import pino from 'pino';
 
-const isProd = process.env.NODE_ENV === 'production'
+const isProd = process.env.NODE_ENV === 'production';
 
 const logger = pino(
   isProd
@@ -9,9 +9,9 @@ const logger = pino(
         level: 'debug',
         transport: {
           target: 'pino-pretty',
-          options: { colorize: true, singleLine: true }
-        }
-      }
-)
+          options: { colorize: true, singleLine: true },
+        },
+      },
+);
 
-export default logger
+export default logger;

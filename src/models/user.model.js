@@ -11,7 +11,7 @@ const schema = new mongoose.Schema(
     role: { type: String, default: Role.User },
     stocks: { type: Array, default: [] },
     farmerCode: { type: String, unique: true },
-    address: { type: String, required: true }
+    address: { type: String, required: true },
   },
   { timestamps: true },
 );

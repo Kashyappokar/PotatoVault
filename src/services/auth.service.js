@@ -12,7 +12,13 @@ export async function register({ email, name, password, phone, address }) {
     throw ApiError.conflict('Email already registered');
   }
   const hash = await bcrypt.hash(password, 10);
-  const user = await User.create({ email, name, password: hash, phone, address });
+  const user = await User.create({
+    email,
+    name,
+    password: hash,
+    phone,
+    address,
+  });
   const token = jwt.sign(
     {
       id: user.id,

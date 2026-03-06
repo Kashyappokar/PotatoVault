@@ -1,10 +1,12 @@
-import { config as load } from 'dotenv'
-import { z } from 'zod'
+import { config as load } from 'dotenv';
+import { z } from 'zod';
 
-load()
+load();
 
 const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
   PORT: z
     .string()
     .optional()
@@ -12,13 +14,15 @@ const EnvSchema = z.object({
     .pipe(z.number().min(1)),
   JWT_SECRET: z.string().min(16),
   MONGO_URL: z.string().url(),
-  CORS_ORIGIN: z.string().optional()
-})
+  CORS_ORIGIN: z.string().optional(),
+});
 
-const parsed = EnvSchema.safeParse(process.env)
+const parsed = EnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  throw new Error('Invalid environment: ' + JSON.stringify(parsed.error.format()))
+  throw new Error(
+    'Invalid environment: ' + JSON.stringify(parsed.error.format()),
+  );
 }
 
-export const env = parsed.data
+export const env = parsed.data;
