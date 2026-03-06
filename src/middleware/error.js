@@ -1,38 +1,31 @@
-import { ZodError } from 'zod'
-import { ApiError } from '../utils/ApiErrors.js'
+import { ZodError } from 'zod';
+import { ApiError } from '../utils/ApiErrors.js';
 
 export const errorHandler = (err, req, res, _next) => {
-  let error = err
+  let error = err;
 
   // 🔹 Zod validation errors
   if (error instanceof ZodError) {
-    const issues = error.issues || error.errors || []
+    const issues = error.issues || [];
+    const firstIssue = issues[0];
 
-    error = ApiError.badRequest(
-      'Validation Error',
-      issues.map((issue) => ({
-        field: issue.path?.join('.') ?? 'unknown',
-        message: issue.message
-      }))
-    )
+    const field = firstIssue?.path?.join('.') || 'unknown';
+    const message = firstIssue?.message || 'Validation error';
+
+    error = ApiError.badRequest(message, field);
   }
 
   // 🔹 Mongoose duplicate key error
   else if (error.code === 11000) {
-    const field = Object.keys(error.keyValue)[0]
+    const field = Object.keys(error.keyValue)[0];
 
-    error = ApiError.conflict(`${field} already exists`, [
-      {
-        field,
-        message: `${field} must be unique`
-      }
-    ])
+    error = ApiError.conflict(`${field} already exists`, field);
   }
 
-  // 🔹 Already an ApiError → leave it
+  // 🔹 Unknown errors
   else if (!(error instanceof ApiError)) {
-    error = ApiError.internal(error.message || 'Internal Server Error')
+    error = ApiError.internal(error.message || 'Internal Server Error');
   }
 
-  res.status(error.statusCode).json(error.toJSON())
-}
+  res.status(error.statusCode).json(error.toJSON());
+};

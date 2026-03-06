@@ -3,95 +3,149 @@ class ApiError extends Error {
   constructor(
     statusCode = 500,
     message = 'Internal Server Error',
-    errors = null,
-    isOperational = true
+    field = null,
+    isOperational = true,
+    code = 'ERROR',
+    source = null,
   ) {
-    super(message)
+    super(message);
 
-    this.name = this.constructor.name
-    this.success = false
-    this.statusCode = statusCode
-    this.message = message
-    this.errors = errors
-    this.isOperational = isOperational
-    this.timestamp = new Date().toISOString()
+    this.name = this.constructor.name;
+    this.success = false;
+    this.statusCode = statusCode;
+    this.message = message;
+    this.field = field;
+    this.isOperational = isOperational;
+    this.timestamp = new Date().toISOString();
+    this.code = code;
+    this.source = source;
+    this.route = null;
 
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor)
+      Error.captureStackTrace(this, this.constructor);
     }
   }
 
-  static badRequest(message = 'Bad Request', errors = null) {
-    return new ApiError(400, message, errors)
+  withCode(code) {
+    this.code = code;
+    return this;
   }
 
-  static unauthorized(message = 'Unauthorized') {
-    return new ApiError(401, message)
+  withSource(source) {
+    this.source = source;
+    return this;
   }
 
-  static forbidden(message = 'Forbidden') {
-    return new ApiError(403, message)
+  withRoute(route) {
+    this.route = route;
+    return this;
   }
 
-  static notFound(message = 'Resource not found') {
-    return new ApiError(404, message)
+  withField(field) {
+    this.field = field;
+    return this;
   }
 
-  static conflict(message = 'Conflict') {
-    return new ApiError(409, message)
+  static badRequest(message = 'Bad Request', field = null) {
+    return new ApiError(400, message, field);
   }
 
-  static validationError(message = 'Validation Error', errors = null) {
-    return new ApiError(422, message, errors)
+  static unauthorized(message = 'Unauthorized', field = null) {
+    return new ApiError(401, message, field).withCode('UNAUTHORIZED');
   }
 
-  static internal(message = 'Internal Server Error', errors = null) {
-    return new ApiError(500, message, errors, false)
+  static forbidden(message = 'Forbidden', field = null) {
+    return new ApiError(403, message, field).withCode('FORBIDDEN');
+  }
+
+  static notFound(message = 'Resource not found', field = null) {
+    return new ApiError(404, message, field).withCode('NOT_FOUND');
+  }
+
+  static conflict(message = 'Conflict', field = null) {
+    return new ApiError(409, message, field).withCode('CONFLICT');
+  }
+
+  static validationError(message = 'Validation Error', field = null) {
+    return new ApiError(422, message, field).withCode('VALIDATION_ERROR');
+  }
+
+  static internal(message = 'Internal Server Error', field = null) {
+    return new ApiError(500, message, field, false).withCode('INTERNAL_ERROR');
   }
 
   static errorHandler(err, req, res, _next) {
-    let error = err
+    let error = err;
     if (!(error instanceof ApiError)) {
-      const statusCode = error.statusCode || 500
-      const message = error.message || 'Internal Server Error'
-      error = new ApiError(statusCode, message, null, false)
+      const statusCode = error.statusCode || 500;
+      const message = error.message || 'Internal Server Error';
+      error = new ApiError(statusCode, message, null, false).withCode(
+        'INTERNAL_ERROR',
+      );
     }
-    console.error(`${error.name}: ${error.message}`)
+    const routeInfo = { method: req.method, path: req.originalUrl };
+    if (!error.route) error.withRoute(routeInfo);
+
+    if (!error.source) {
+      const stack = error.stack || '';
+      const match = stack.match(
+        /src[\\/](controllers|services|middleware|routes)[\\/][^:)\n]+/i,
+      );
+      if (match) {
+        const layer = match[0].split(/[\\/]/)[1];
+        const file = match[0].split(/[\\/]/).slice(2).join('/');
+        error.withSource(`${layer}:${file}`);
+      } else {
+        error.withSource('unknown');
+      }
+    }
+    console.error(`${error.name}: ${error.message}`);
     if (process.env.NODE_ENV === 'development') {
-      console.error(error.stack)
+      console.error(error.stack);
     }
-    res.status(error.statusCode).json(error.toJSON())
+    res.status(error.statusCode).json(error.toJSON());
   }
 
   toJSON() {
-    return {
+    const payload = {
       success: false,
-      statusCode: this.statusCode,
       message: this.message,
-      errors: this.errors ?? [], // ✅ always an array
-      timestamp: this.timestamp,
-      ...(process.env.NODE_ENV === 'development' && {
-        stack: this.stack?.split('\n').map((line) => line.trim())
-      })
-    }
+      field: this.field ?? null,
+    };
+    const stack =
+      process.env.NODE_ENV === 'development'
+        ? this.stack?.split('\n').map((line) => line.trim())
+        : undefined;
+    if (stack) payload.stack = stack;
+    return payload;
   }
 }
 
 const errorHandler = (err, req, res, _next) => {
-  let error = err
+  let error = err;
 
   if (!(error instanceof ApiError)) {
-    const statusCode = error.statusCode || 500
-    const message = error.message || 'Internal Server Error'
-    error = new ApiError(statusCode, message, null, false)
+    const statusCode = error.statusCode || 500;
+    const message = error.message || 'Internal Server Error';
+    error = new ApiError(statusCode, message, null, false).withCode(
+      'INTERNAL_ERROR',
+    );
   }
 
-  console.error(`${error.name}: ${error.message}`)
+  const routeInfo = { method: req.method, path: req.originalUrl };
+  if (!error.route) error.withRoute(routeInfo);
+  if (!error.source) error.withSource('unknown');
+
+  console.error(`${error.name}: ${error.message}`);
   if (process.env.NODE_ENV === 'development') {
-    console.error(error.stack)
+    console.error(error.stack);
   }
 
-  res.status(error.statusCode).json(error.toJSON())
-}
+  res.status(error.statusCode).json(error.toJSON());
+};
 
-export { ApiError, errorHandler }
+export default {
+  ApiError,
+  errorHandler,
+};
+export { ApiError, errorHandler };
