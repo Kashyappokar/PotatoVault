@@ -3,15 +3,14 @@ import * as AuthService from '../services/auth.service.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiErrors.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { Role } from '../utils/enums/role.enum.js';
 import logger from '../utils/logger.js';
 
 const RegisterSchema = z.object({
   email: z.string().email({ message: 'Invalid email format' }),
   name: z.string().min(2),
   password: z.string().min(8),
-  role: z.enum(Object.values(Role)).default(Role.User),
   phone: z.string().min(10).max(10),
+  address: z.string()
 });
 
 const LoginSchema = z.object({

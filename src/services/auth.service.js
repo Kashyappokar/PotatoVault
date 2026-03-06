@@ -5,14 +5,14 @@ import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/ApiErrors.js';
 import logger from '../utils/logger.js';
 
-export async function register({ email, name, password, phone }) {
+export async function register({ email, name, password, phone, address }) {
   const existing = await User.findOne({ email });
   if (existing) {
     logger.error({ email }, 'Email already registered');
     throw ApiError.conflict('Email already registered');
   }
   const hash = await bcrypt.hash(password, 10);
-  const user = await User.create({ email, name, password: hash, phone });
+  const user = await User.create({ email, name, password: hash, phone, address });
   const token = jwt.sign(
     {
       id: user.id,
@@ -34,6 +34,7 @@ export async function register({ email, name, password, phone }) {
       phone: user.phone,
       role: user.role,
       farmerCode: user.farmerCode,
+      address: user.address,
     },
   };
 }
