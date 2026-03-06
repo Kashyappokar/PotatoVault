@@ -15,6 +15,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(16),
   MONGO_URL: z.string().url(),
   CORS_ORIGIN: z.string().optional(),
+  JWT_EXPIRES_IN: z.string().optional().default('7d'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

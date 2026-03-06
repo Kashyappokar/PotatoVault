@@ -6,10 +6,10 @@ import { ApiError } from '../utils/ApiErrors.js';
 import logger from '../utils/logger.js';
 
 export async function register({ email, name, password, phone, address }) {
-  const existing = await User.findOne({ email });
+  const existing = await User.findOne({ email, phone });
   if (existing) {
-    logger.error({ email }, 'Email already registered');
-    throw ApiError.conflict('Email already registered');
+    logger.error(`Email and phone already registered: ${email}, ${phone}`);
+    throw ApiError.conflict('Email and phone already registered');
   }
   const hash = await bcrypt.hash(password, 10);
   const user = await User.create({
@@ -28,7 +28,7 @@ export async function register({ email, name, password, phone, address }) {
     },
     env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+      expiresIn: env.JWT_EXPIRES_IN || '7d',
     },
   );
   return {
@@ -54,10 +54,15 @@ export async function login({ email, password }) {
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) {
     logger.error({ password }, 'Invalid password');
-    throw ApiError.unauthorized('Invalid password');
+    throw ApiError.unauthorized('Invalid password ');
   }
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      farmerCode: user.farmerCode,
+    },
     env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
@@ -70,15 +75,27 @@ export async function login({ email, password }) {
   }
   return {
     token,
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      farmerCode: user.farmerCode,
+    },
   };
 }
 
 export async function me(id) {
-  const user = await User.findById(id).select('name email role');
+  const user = await User.findById(id).select('name email role farmerCode');
   if (!user) {
     logger.error({ id }, 'User not found');
     return null;
   }
-  return { id: user.id, email: user.email, name: user.name };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    farmerCode: user.farmerCode,
+  };
 }
