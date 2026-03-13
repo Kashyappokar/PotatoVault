@@ -6,41 +6,40 @@ import asyncHandler from '../utils/asyncHandler.js';
 import logger from '../utils/logger.js';
 
 const StockDataEntrySchema = z.object({
-  date: z.string().min(1),
-  numberOfBags: z.number().nonnegative(),
-  symbol: z.string().min(1),
-  vehicleNumber: z.string().min(1),
-  remark: z.string().min(1),
-  chamber: z.number().nonnegative(),
-  floor: z.number().nonnegative(),
-  netWeight: z.number().nonnegative(),
-  rNumber: z.array(z.string()),
-  weighingBillNumber: z.number().nonnegative(),
+  date: z.string().nonempty('Date is required'),
+  numberOfBags: z.number().min(1).nonnegative(),
+  symbol: z.string().nonempty('Symbol is required'),
+  vehicleNumber: z
+    .string()
+    .nonempty('Vehicle number is required')
+    .length(10, 'Vehicle number must be 10 digits'),
+  remark: z.string().nonempty('Remark is required'),
+  chamber: z.number().min(1).nonnegative(),
+  floor: z.number().min(1).nonnegative(),
+  netWeight: z.number().min(1).nonnegative(),
+  rNumber: z.array(z.string()).optional(),
+  weighingBillNumber: z.number().min(1).nonnegative(),
 });
 
 const StockSchema = z.object({
   farmerCode: z.string().min(1),
-  name: z.string().min(1),
-  address: z.string().min(1),
-  phone: z.string().length(10, 'Phone number must be 10 digits'),
-  stocks: z.array(StockDataEntrySchema, {
-    invalid_type_error: 'Only Array of Stock Data Entries is allowed',
-  }),
+  stocks: z
+    .array(StockDataEntrySchema, {
+      message: 'Only Array of Stock Data Entries is allowed',
+    })
+    .nonempty('At least one stock data entry is required'),
 });
 
 const UpdateSchema = z.object({
-  date: z
-    .string()
-    .regex(/^\d{2}-\d{2}-\d{4}$/, 'Invalid date format, expected DD-MM-YYYY')
-    .optional(),
-  name: z.string().min(2).optional(),
-  address: z.string().min(2).optional(),
-  stockIn: z.number().nonnegative().optional(),
-  phone: z.string().min(10).max(10).optional(),
+  date: z.string().min(1).optional(),
+  numberOfBags: z.number().nonnegative().optional(),
   symbol: z.string().min(1).optional(),
-  vehicleNumber: z.string().optional(),
+  vehicleNumber: z
+    .string()
+    .length(10, 'Vehicle number must be 10 digits')
+    .optional(),
   weighingBillNumber: z.number().nonnegative().optional(),
-  remark: z.string().optional(),
+  remark: z.string().min(1).optional(),
   chamber: z.number().nonnegative().optional(),
   floor: z.number().nonnegative().optional(),
   netWeight: z.number().nonnegative().optional(),
@@ -48,18 +47,46 @@ const UpdateSchema = z.object({
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const rows = await StocksService.list();
+  const user = req.user;
+
+  if (!user.farmerCode) {
+    logger.error('farmerCode is required');
+    throw ApiError.badRequest('farmerCode is required');
+  }
+  const rows = await StocksService.list(user.farmerCode);
+  logger.info(
+    `Stocks found for farmerCode: ${user.farmerCode}, stocks: ${rows}`,
+  );
   res.json(ApiResponse.success(rows));
 });
 
 export const get = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (user && user.role !== 'admin') {
+    logger.error(
+      `Unauthorized access attempt by user: ${JSON.stringify(user)}`,
+    );
+    throw ApiError.unauthorized('Unauthorized access to get stock details');
+  }
+
   const farmerCode = req.params.farmerCode;
   const row = await StocksService.get(farmerCode);
-  if (!row) throw ApiError.notFound('Stock not found');
+  if (!row) {
+    logger.error(`Stock not found for farmerCode: ${farmerCode}`);
+    throw ApiError.notFound('Stock not found');
+  }
+  logger.info(`Stock found for farmerCode: ${farmerCode}, stock: ${row}`);
   res.json(ApiResponse.success(row));
 });
 
 export const create = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (user && user.role !== 'admin') {
+    logger.error(
+      `Unauthorized access attempt by user: ${JSON.stringify(user)}`,
+    );
+    throw ApiError.unauthorized('Unauthorized access to create stock');
+  }
   const data = StockSchema.safeParse(req.body);
   if (!data.success) {
     logger.error('Invalid stock data:', data.error);
@@ -70,14 +97,34 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const update = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (user && user.role !== 'admin') {
+    logger.error(
+      `Unauthorized access attempt by user: ${JSON.stringify(user)}`,
+    );
+    throw ApiError.unauthorized('Unauthorized access to update stock');
+  }
+
   const id = req.params.id;
-  const data = UpdateSchema.parse(req.body);
-  const row = await StocksService.update(id, data);
+  const data = UpdateSchema.safeParse(req.body);
+  if (!data.success) {
+    logger.error('Invalid update data:', data.error);
+    throw data.error;
+  }
+  const row = await StocksService.update(id, data?.data);
   if (!row) throw ApiError.notFound('Stock not found');
   res.json(ApiResponse.success(row));
 });
 
 export const remove = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (user && user.role !== 'admin') {
+    logger.error(
+      `Unauthorized access attempt by user: ${JSON.stringify(user)}`,
+    );
+    throw ApiError.unauthorized('Unauthorized access to remove stock');
+  }
+
   const id = req.params.id;
   const row = await StocksService.remove(id);
   if (!row) throw ApiError.notFound('Stock not found');
