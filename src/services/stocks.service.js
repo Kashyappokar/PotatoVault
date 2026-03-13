@@ -12,7 +12,7 @@ export async function list(farmerCode) {
   }
 
   const [stock, validFarmerCode] = await Promise.all([
-    Stock.find({ farmerCode }),
+    Stock.findOne({ farmerCode }),
     User.findOne({ farmerCode }),
   ]);
 
